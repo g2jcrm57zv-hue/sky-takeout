@@ -17,9 +17,11 @@ import com.sky.mapper.EmployeeMapper;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.EmployeeService;
+
 import org.apache.ibatis.annotations.Insert;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -91,15 +93,6 @@ public class EmployeeServiceImpl implements EmployeeService {
                         .DEFAULT_PASSWORD
                         .getBytes())); // 由于传入数据库，需要MD5加密，因此使用工具类方法加密。
 
-        // 设置当前记录的创建时间与修改时间，即系统时间
-        employee.setCreateTime(LocalDateTime.now());
-        employee.setUpdateTime(LocalDateTime.now());
-
-        // 设置当前记录人id和修改人id
-        // 由于暂时无法获取到，因此写死
-        employee.setCreateUser(BaseContext.getCurrentId());
-        employee.setUpdateUser(BaseContext.getCurrentId());
-
         employeeMapper.insert(employee);
     }
 
@@ -125,5 +118,52 @@ public class EmployeeServiceImpl implements EmployeeService {
         long total = page.getTotal();
         List<Employee> employees = page.getResult();
         return new PageResult(total, employees);
+    }
+
+    /**
+     * 2026/1/12
+     * 启用、禁用员工登录
+     * @param status
+     * @param id
+     * @return
+     */
+    @Override
+    public Result startOrStop(Integer status, Long id){
+        // 该方法实现逻辑是通过发送SQL语句，根据员工ID更改他的Status
+        // update employee set status = ? where id = ?
+
+        Employee employee = new Employee();
+        employee.setStatus(status);
+        employee.setId(id);
+
+        employeeMapper.update(employee);
+        return Result.success();
+    }
+
+    /**
+     * 2026/1/22
+     * 根据ID查询员工信息
+     * @param id
+     * @return
+     */
+    @Override
+    public Employee getById(Long id){
+        Employee employee = employeeMapper.getById(id);
+        employee.setPassword("****"); // 因安全性原因，不能给前端看密码。
+        return employee;
+    }
+
+    /**
+     * 2026/1/22
+     * 编辑员工信息
+     * @param employeeDTO
+     * @return
+     */
+    @Override
+    public void update(EmployeeDTO employeeDTO){
+        Employee employee = new Employee();
+        BeanUtils.copyProperties(employeeDTO, employee);
+
+        employeeMapper.update(employee);
     }
 }

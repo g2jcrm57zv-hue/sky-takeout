@@ -5,6 +5,7 @@ import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
 import com.sky.entity.Employee;
 import com.sky.result.PageResult;
+import com.sky.result.Result;
 
 public interface EmployeeService {
 
@@ -29,4 +30,29 @@ public interface EmployeeService {
      * @param employeePageQueryDTO
      */
     PageResult pageQuery(EmployeePageQueryDTO employeePageQueryDTO);
+
+    /**
+     * 2026/1/12
+     * 启用、禁用员工登录
+     * @param status
+     * @param id
+     * @return
+     */
+    Result startOrStop(Integer status, Long id);
+
+    /**
+     * 2026/1/22
+     * 根据ID查询员工信息
+     * @param id
+     * @return
+     */
+    Employee getById(Long id);
+
+    /**
+     * 2026/1/22
+     * 编辑员工信息
+     * @param employeeDTO
+     * @return
+     */
+    void update(EmployeeDTO employeeDTO);
 }
