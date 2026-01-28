@@ -107,7 +107,7 @@ public class DishServiceImpl implements DishService {
         dishMapper.deleteByIds(ids);
 
         // sql:delete from dish_flavor where dishId in (?, ?, ?)
-        dishFlavorMapper.deleteByIds(ids);
+        dishFlavorMapper.deleteByDishIds(ids);
     }
 
     @Override
@@ -122,4 +122,28 @@ public class DishServiceImpl implements DishService {
         dishVO.setFlavors(dishFlavors);
         return dishVO;
     }
+
+    /**
+     * 修改菜品
+     * @param dishDTO
+     */
+    @Override
+    public void updateWithFlavor(DishDTO dishDTO){
+        Dish dish = new Dish();
+        BeanUtils.copyProperties(dishDTO, dish);
+        // 修改菜品信息
+        dishMapper.update(dish);
+        // 删除原有口味
+        dishFlavorMapper.deleteByDishId(dish.getId());
+        // 插入现有口味
+        List<DishFlavor> flavors = dishDTO.getFlavors();
+        if(flavors != null && flavors.size() > 0) {
+            flavors.forEach(dishFlavor -> {
+                dishFlavor.setDishId(dishDTO.getId());
+            });
+
+            dishFlavorMapper.insertBatch(flavors); // 此处为批量插入，无需循环
+        }
+    }
 }
+

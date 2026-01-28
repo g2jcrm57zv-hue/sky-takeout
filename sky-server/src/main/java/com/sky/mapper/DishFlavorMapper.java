@@ -16,16 +16,16 @@ public interface DishFlavorMapper {
      */
     void insertBatch(List<DishFlavor> flavors);
 
-    @Delete("delete from dish_flavor where id = #{dishId}")
-    void deleteById(Long dishId);
+    @Delete("delete from dish_flavor where dish_id = #{dishId}")
+    void deleteByDishId(Long dishId);
 
-    void deleteByIds(List<Long> dishIds);
+    void deleteByDishIds(List<Long> dishIds);
 
     /**
      * 2026/1/28
      * 根据ID查找菜品口味
      * @param id
      */
-    @Select("select * from dish_flavor where id = #{dishId}")
+    @Select("select * from dish_flavor where dish_id = #{dishId}")
     List<DishFlavor> getByDishId(Long id);
 }
