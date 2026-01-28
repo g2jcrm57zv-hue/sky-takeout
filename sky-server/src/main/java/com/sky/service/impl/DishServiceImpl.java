@@ -81,7 +81,7 @@ public class DishServiceImpl implements DishService {
      * @return
      */
     @Transactional
-    public Result deleteBatch(List<Long> ids) {
+    public void deleteBatch(List<Long> ids) {
         // 1.判断是否为起售中菜品：
         for (Long id : ids) {
             Dish dish = dishMapper.getById(id);
@@ -95,12 +95,21 @@ public class DishServiceImpl implements DishService {
             throw new DeletionNotAllowedException(MessageConstant.DISH_BE_RELATED_BY_SETMEAL);
         }
         // 3.删除菜品表中的菜品数据：
-        for (Long id : ids) {
-            dishMapper.deleteById(id);
-            // 4.删除菜品关联的口味数据：
-            dishFlavorMapper.deleteById(id);
-        }
+//        for (Long id : ids) {
+//            dishMapper.deleteById(id);
+//            // 4.删除菜品关联的口味数据：
+//            dishFlavorMapper.deleteById(id);
+//        }
+//
+//        return null;
 
-        return null;
+        // sql:delete from dish where id in (?, ?, ?)
+        dishMapper.deleteByIds(ids);
+
+        // sql:delete from dish_flavor where dishId in (?, ?, ?)
+        dishFlavorMapper.deleteByIds(ids);
+        return Result.success();
     }
+
+
 }
