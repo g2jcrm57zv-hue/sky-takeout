@@ -3,18 +3,23 @@ package com.sky.service.impl;
 import com.sky.dto.GoodsSalesDTO;
 import com.sky.entity.Orders;
 import com.sky.mapper.UserMapper;
-import com.sky.vo.OrderReportVO;
-import com.sky.vo.SalesTop10ReportVO;
-import com.sky.vo.UserReportVO;
+import com.sky.service.WorkspaceService;
+import com.sky.vo.*;
 import org.apache.commons.lang3.StringUtils;
 import com.sky.mapper.OrderMapper;
 import com.sky.service.ReportService;
-import com.sky.vo.TurnoverReportVO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.util.StringUtil;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -33,6 +38,9 @@ public class ReportServiceImpl implements ReportService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private WorkspaceService workspaceService;
 
     public TurnoverReportVO getTurnoverStatistics(LocalDate begin, LocalDate end) {
         //当前集合用于存放从begin到end范围内的每天的日期
@@ -209,4 +217,86 @@ public class ReportServiceImpl implements ReportService {
                 .build();
     }
 
+    @Override
+    public void exportBusinessData(HttpServletResponse response) {
+        LocalDate begin = LocalDate.now().minusDays(30);
+        LocalDate now = LocalDate.now().minusDays(1);
+
+        LocalDateTime beginTime = LocalDateTime.of(begin, LocalTime.MIN);
+        // 【修复1】：结束时间应该用 now
+        LocalDateTime endTime = LocalDateTime.of(now, LocalTime.MAX);
+
+        BusinessDataVO businessDataVO = workspaceService.getBusinessData(beginTime, endTime);
+
+        // 【修复3】：使用 try-with-resources 自动关闭流
+        try (
+                InputStream in = this.getClass().getClassLoader().getResourceAsStream("template/运营数据报表模板.xlsx");
+                XSSFWorkbook excel = new XSSFWorkbook(in);
+                ServletOutputStream outputStream = response.getOutputStream()
+        ) {
+            XSSFSheet sheet = excel.getSheet("Sheet1");
+
+            sheet.getRow(1).getCell(1).setCellValue("时间: " + beginTime.toLocalDate() + "至" + endTime.toLocalDate());
+
+            // 获得第4行
+            XSSFRow row = sheet.getRow(3);
+            row.getCell(2).setCellValue(businessDataVO.getTurnover());
+            row.getCell(4).setCellValue(businessDataVO.getOrderCompletionRate());
+            row.getCell(6).setCellValue(businessDataVO.getNewUsers());
+
+            // 获得第5行
+            row = sheet.getRow(4);
+            row.getCell(2).setCellValue(businessDataVO.getValidOrderCount());
+            row.getCell(4).setCellValue(businessDataVO.getUnitPrice());
+
+            // 填充明细数据
+            for (int i = 0; i < 30; i++) {
+                LocalDate date = begin.plusDays(i);
+                BusinessDataVO businessData = workspaceService.getBusinessData(
+                        LocalDateTime.of(date, LocalTime.MIN),
+                        LocalDateTime.of(date, LocalTime.MAX)
+                );
+
+                // 【修复4】：防止模板中没有空行导致 NPE
+                row = sheet.getRow(7 + i);
+                if (row == null) {
+                    row = sheet.createRow(7 + i);
+                }
+
+                // 使用自定义方法或显式判断防止 Cell 为 null 导致 NPE
+                setCellValueSafely(row, 1, date.toString());
+                setCellValueSafely(row, 2, businessData.getTurnover());
+                setCellValueSafely(row, 3, businessData.getValidOrderCount());
+                setCellValueSafely(row, 4, businessData.getOrderCompletionRate());
+                setCellValueSafely(row, 5, businessData.getUnitPrice());
+                setCellValueSafely(row, 6, businessData.getNewUsers());
+            }
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("utf-8");
+            response.setHeader("Content-Disposition", "attachment;filename=business_data.xlsx");
+
+            excel.write(outputStream);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            // 实际项目中建议抛出自定义的业务异常或记录 log.error()
+        }
+    }
+
+
+    private void setCellValueSafely(XSSFRow row, int columnIndex, Object value) {
+        org.apache.poi.ss.usermodel.Cell cell = row.getCell(columnIndex);
+        if (cell == null) {
+            cell = row.createCell(columnIndex);
+        }
+
+        if (value != null) {
+            if (value instanceof Number) {
+                cell.setCellValue(((Number) value).doubleValue());
+            } else {
+                cell.setCellValue(value.toString());
+            }
+        }
+    }
 }
