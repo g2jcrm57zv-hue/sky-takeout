@@ -60,7 +60,7 @@ Provides comprehensive business data analysis to assist merchants in operational
 
 **Clone the project:**
 ```bash
-git clone [https://github.com/g2jcrm57zv-hue/sky-takeout](https://github.com/g2jcrm57zv-hue/sky-takeout)
+git clone https://github.com/g2jcrm57zv-hue/sky-takeout
 ```
 
 **Modify Configuration:**
